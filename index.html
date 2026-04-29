@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick IP Calculator</title>
+    <!-- Using Bootstrap for a clean, professional UI without extra effort -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding-top: 50px; }
+        .calc-container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .result-box { margin-top: 20px; display: none; }
+        .list-group-item { display: flex; justify-content: space-between; }
+        .label { font-weight: bold; color: #495057; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="calc-container">
+        <h2 class="text-center mb-4">IPv4 Subnet Calculator</h2>
+        
+        <div class="mb-3">
+            <label class="form-label">IP Address</label>
+            <input type="text" id="ipAddress" class="form-control" placeholder="e.g., 192.168.1.1" value="192.168.1.1">
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">CIDR Prefix (e.g., /24)</label>
+            <select id="cidr" class="form-select">
+                <!-- JavaScript will populate this -->
+            </select>
+        </div>
+
+        <button onclick="calculate()" class="btn btn-primary w-100">Calculate</button>
+
+        <div id="results" class="result-box">
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><span class="label">Network Address:</span> <span id="resNet"></span></li>
+                <li class="list-group-item"><span class="label">Subnet Mask:</span> <span id="resMask"></span></li>
+                <li class="list-group-item"><span class="label">Broadcast Address:</span> <span id="resBroad"></span></li>
+                <li class="list-group-item"><span class="label">Usable Host Range:</span> <span id="resRange"></span></li>
+                <li class="list-group-item"><span class="label">Total Hosts:</span> <span id="resHosts"></span></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Populate CIDR dropdown
+    const select = document.getElementById('cidr');
+    for (let i = 1; i <= 32; i++) {
+        let opt = document.createElement('option');
+        opt.value = i;
+        opt.innerHTML = `/${i}`;
+        if (i === 24) opt.selected = true;
+        select.appendChild(opt);
+    }
+
+    function calculate() {
+        const ip = document.getElementById('ipAddress').value;
+        const cidr = parseInt(document.getElementById('cidr').value);
+        
+        if (!validateIP(ip)) {
+            alert("Please enter a valid IP address");
+            return;
+        }
+
+        const ipParts = ip.split('.').map(Number);
+        const mask = (0xFFFFFFFF << (32 - cidr)) >>> 0;
+        
+        // Convert mask to dot-decimal
+        const maskStr = [
+            (mask >>> 24) & 0xFF,
+            (mask >>> 16) & 0xFF,
+            (mask >>> 8) & 0xFF,
+            mask & 0xFF
+        ].join('.');
+
+        const ipInt = ((ipParts[0] << 24) | (ipParts[1] << 16) | (ipParts[2] << 8) | ipParts[3]) >>> 0;
+        const netInt = (ipInt & mask) >>> 0;
+        const broadInt = (netInt | (~mask)) >>> 0;
+
+        const netStr = intToIP(netInt);
+        const broadStr = intToIP(broadInt);
+        const firstHost = intToIP(netInt + 1);
+        const lastHost = intToIP(broadInt - 1);
+        const hostCount = Math.max(0, (broadInt - netInt) - 1);
+
+        // Update UI
+        document.getElementById('resNet').innerText = netStr;
+        document.getElementById('resMask').innerText = maskStr;
+        document.getElementById('resBroad').innerText = broadStr;
+        document.getElementById('resRange').innerText = cidr < 31 ? `${firstHost} - ${lastHost}` : "N/A";
+        document.getElementById('resHosts').innerText = hostCount.toLocaleString();
+        document.getElementById('results').style.display = 'block';
+    }
+
+    function validateIP(ip) {
+        const re = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        return re.test(ip);
+    }
+
+    function intToIP(int) {
+        return [
+            (int >>> 24) & 0xFF,
+            (int >>> 16) & 0xFF,
+            (int >>> 8) & 0xFF,
+            int & 0xFF
+        ].join('.');
+    }
+</script>
+
+</body>
+</html>
